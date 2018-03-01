@@ -1,2 +1,2 @@
-#### Implementation of a low capacity symmetric neural networks using python
+##### Implementation of a low capacity symmetric neural networks using python
 #####  
