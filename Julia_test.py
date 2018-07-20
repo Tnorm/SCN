@@ -8,31 +8,27 @@ from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
 import pickle
 from scipy.stats import multivariate_normal
+from Julia_Set import Julia
 
 
-X = np.arange(0.01, 0.5, 0.01)
-Y = np.arange(0.01, 0.5, 0.01)
+X = np.arange(0.00, 0.50, 0.01)
+Y = np.arange(0.00, 0.50, 0.01)
 X, Y = np.meshgrid(X, Y)
 
-
-mu = np.array([0.25, 0.25])
-sigma = np.array([[1., -0.5], [-0.5, 1.5]])/100
 
 pos = np.empty(X.shape + (2,))
 pos[:, :, 0] = X
 pos[:, :, 1] = Y
-
-F = multivariate_normal(mu, sigma)
 # The distribution on the variables X, Y packed into pos.
-Z = F.pdf(pos)
 
+Z = Julia()
 
 
 visible_units = Variable(torch.FloatTensor([[0,0], [1,0], [0,1]]).view(3, -1))
 
 
 
-batch_size = 10
+batch_size = 1000
 input_dim = 1
 
 iterations = 10000
@@ -42,7 +38,7 @@ lr1 = 0.01
 S = np.zeros(iterations)
 
 for experiment in range(experiments):
-    scn = SCN(3, 2, visible_units, 3)
+    scn = SCN(3, 2, visible_units, 4)
     optimizer = torch.optim.SGD(scn.parameters(), lr=lr1)
     criterion = torch.nn.MSELoss()
     pos1 = torch.from_numpy(pos)
@@ -69,19 +65,19 @@ for experiment in range(experiments):
         #scn.biases.data = torch.zeros(scn.biases.size())
         optimizer.zero_grad()
 
-        if i % 3000 == 0:
+        if i % 300 == 0:
             print i
+            plt.close()
             #pltx = pos1.view(-1, input_dim).numpy()
-            plty1 = scn(Variable(pos1.view(-1, 2))).data.view(49,49)
+            plty1 = scn(Variable(pos1.view(-1, 2))).data.view(50,50)
             #plty = Z1.view(-1, 1).numpy()
             fig = plt.figure()
             ax = fig.gca(projection='3d')
-            surf = ax.plot_surface(X, Y, plty1.numpy(), cmap=cm.viridis, linewidth=0, antialiased=False)
+            #surf = ax.plot_surface(X, Y, plty1.numpy(), cmap=cm.viridis, linewidth=0, antialiased=False)
             #surf2 = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm, linewidth=0, antialiased=False)
-            #cset = ax.contourf(X, Y, plty1.numpy(), zdir='z', offset=0.05, cmap=cm.viridis)
+            cset = ax.contourf(X, Y, plty1.numpy(), zdir='z', offset=0.05, cmap=cm.viridis)
             plt.pause(0.5)
-            plt.clf()
-
+            plt.cla()
 
 with open("scn_res.txt2", "wb") as fp:  # Pickling
     pickle.dump(S/experiments, fp)

@@ -42,7 +42,6 @@ for experiment in range(experiments):
         loss = criterion(output, y)
         S[i] += loss.data[0]
         loss.backward()
-        print loss
         optimizer.step()
         optimizer.zero_grad()
         if i % 100 == 0:

@@ -13,7 +13,7 @@ class SCN(torch.nn.Module):
         # depth = number of hidden units
         self.L = []
         for _ in range(depth):
-            self.L.append(torch.nn.Parameter(torch.ones(1,visible_num)/visible_num, requires_grad = True))
+            self.L.append(torch.nn.Parameter(torch.ones(1,visible_num)/visible_num, requires_grad=True))
             ## visible units are defined as columns of a matrix
         ### UNCOMMENT THESE TWO LINES FOR SCN_fractal_test
         #self.visible_fs = torch.nn.Parameter(torch.randn(visible_num, 1), requires_grad=True)
@@ -58,7 +58,8 @@ class SCN(torch.nn.Module):
 
     def update_h_mdl1(self, f, h, indices, weights, i):
         new_h = torch.bmm(weights.repeat(h.size()[0], 1, 1), h).view(-1, self.input_dim)
-        f[range(h.size()[0]), indices.long(), :] = torch.bmm(weights.repeat(h.size()[0], 1, 1), f.clone()) + self.biases[i]
+        f[range(h.size()[0]), indices.long(), :] = (torch.bmm(weights.repeat(h.size()[0], 1, 1), f.clone())
+                                                    + self.biases[i]).squeeze(-1)
         h[range(h.size()[0]), indices.long(), :] = new_h
         return f, h
 
@@ -88,59 +89,60 @@ batch_size = 10
 input_dim = 1
 
 iterations = 10000
-lr1 = 0.1
+lr1 = 0.01
 
-# if __name__ == "__main__":
-#     X = torch.from_numpy(np.arange(100)*0.01 + 0.01).view(100, -1)
-#     X = X.type(torch.FloatTensor)
-#     #Y = ((X - 0.5) * (X - 0.5) + torch.rand(100,1)/50).view(100, -1)
-#     Y = torch.from_numpy(norm.pdf(np.arange(100)*0.01 + 0.01,loc=0.7, scale=0.07)).view(100,-1)
-#     Y = Y.type(torch.FloatTensor)
-#
-#     visible_units = Variable(torch.FloatTensor([0, 1]).view(2, -1))
-#     #visible_init_y = Variable(torch.FloatTensor([0, 0]).view(-1, 2))
-#
-#     scn = SCN(2, 1, visible_units, 10)
-#
-#
-#
-#     optimizer = torch.optim.SGD(scn.parameters(), lr=lr1)
-#     criterion = torch.nn.MSELoss()
-#     for i in range(iterations):
-#         sample_inds = np.random.choice(X.size()[0], batch_size)
-#         samples = Variable(X[sample_inds])
-#         y = Variable(Y[sample_inds])
-#         output = scn(samples).view(-1,1)
-#         loss = criterion(output, y)
-#         loss.backward(retain_graph = True)
-#
-#         optimizer.step()
-#         volatility = 1
-#         for j in range(scn.depth):
-#             scn.L[j].data = (scn.L[j].data - lr1*volatility*scn.L[j].grad.data).clamp(0.4,0.6)
-#             scn.L[j].data = (scn.L[j].data/(scn.L[j].data.sum())).clamp(0,1)
-#             #scn.L[j].data = torch.ones(scn.L[j].size())/2
-#             volatility *= 1
-#         optimizer.zero_grad()
-#
-#         #scn.biases.data = torch.zeros(scn.biases.size())
-#         #scn.visible_fs.data = torch.zeros(scn.visible_fs.size())
-#
-#
-#
-#     #print(scn(Variable(torch.FloatTensor([0.5]).view(1,1))))
-#     #print(scn.L[0])
-#         if i% 10 == 0:
-#             pltx = X.view(-1,input_dim).numpy()
-#             plty1 = scn(Variable(X)).data.view(-1,1).numpy()
-#             plty = Y.view(-1,1).numpy()
-#
-#             plt.plot(pltx, plty, pltx, plty1)
-#             plt.xlim(0,1.01)
-#             plt.pause(0.2)
-#             plt.clf()
-#
-# plt.show()
+if __name__ == "__main__":
+    X = torch.from_numpy(np.arange(100)*0.01 + 0.01).view(100, -1)
+    X = X.type(torch.FloatTensor)
+    #Y = ((X - 0.5) * (X - 0.5) + torch.rand(100,1)/50).view(100, -1)
+    Y = torch.from_numpy(norm.pdf(np.arange(100)*0.01 + 0.01,loc=0.7, scale=0.07)).view(100,-1) + \
+        torch.from_numpy(norm.pdf(np.arange(100)*0.01 + 0.01, loc=0.3, scale=0.07)).view(100, -1)
+    Y = Y.type(torch.FloatTensor)
+
+    visible_units = Variable(torch.FloatTensor([0, 1]).view(2, -1))
+    #visible_init_y = Variable(torch.FloatTensor([0, 0]).view(-1, 2))
+
+    scn = SCN(2, 1, visible_units, 30)
+
+
+
+    optimizer = torch.optim.SGD(scn.parameters(), lr=lr1)
+    criterion = torch.nn.MSELoss()
+    for i in range(iterations):
+        sample_inds = np.random.choice(X.size()[0], batch_size)
+        samples = Variable(X[sample_inds])
+        y = Variable(Y[sample_inds])
+        output = scn(samples).view(-1,1)
+        loss = criterion(output, y)
+        loss.backward(retain_graph = True)
+
+        optimizer.step()
+        volatility = 1
+        for j in range(scn.depth):
+            #scn.L[j].data = (scn.L[j].data - lr1*volatility*scn.L[j].grad.data).clamp(0.4,0.6)
+            #scn.L[j].data = (scn.L[j].data/(scn.L[j].data.sum())).clamp(0,1)
+            scn.L[j].data = torch.ones(scn.L[j].size())/2
+            #volatility *= 0.9
+        optimizer.zero_grad()
+
+        #scn.biases.data = torch.zeros(scn.biases.size())
+        #scn.visible_fs.data = torch.zeros(scn.visible_fs.size())
+
+
+
+    #print(scn(Variable(torch.FloatTensor([0.5]).view(1,1))))
+    #print(scn.L[0])
+        if i% 10 == 0:
+            pltx = X.view(-1,input_dim).numpy()
+            plty1 = scn(Variable(X)).data.view(-1,1).numpy()
+            plty = Y.view(-1,1).numpy()
+
+            plt.plot(pltx, plty, pltx, plty1)
+            plt.xlim(0,1.01)
+            plt.pause(0.2)
+            plt.clf()
+
+plt.show()
 
 
 

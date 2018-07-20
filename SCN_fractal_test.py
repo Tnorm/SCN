@@ -56,15 +56,15 @@ for experiment in range(experiments):
 
         if i % 100 == 0:
             print i
-            # pltx = X.view(-1, input_dim).numpy()
-            # plty1 = scn(Variable(X)).data.view(-1, 1).numpy()
-            # plty = Y.view(-1, 1).numpy()
+            pltx = X.view(-1, input_dim).numpy()
+            plty1 = scn(Variable(X)).data.view(-1, 1).numpy()
+            plty = Y.view(-1, 1).numpy()
             #
-            # plt.scatter(pltx, plty)
-            # plt.scatter(pltx, plty1)
+            plt.scatter(pltx, plty)
+            plt.scatter(pltx, plty1)
             # plt.xlim(0, 1)
-            # plt.pause(0.1)
-            # plt.clf()
+            plt.pause(0.1)
+            plt.clf()
 
 with open("scn_res.txt2", "wb") as fp:  # Pickling
     pickle.dump(S/experiments, fp)
