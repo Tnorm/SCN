@@ -79,7 +79,7 @@ for experiment in range(experiments):
             plt.pause(0.5)
             plt.cla()
 
-with open("scn_res.txt2", "wb") as fp:  # Pickling
+with open("scn_res2.txt", "wb") as fp:  # Pickling
     pickle.dump(S/experiments, fp)
 
 #plt.plot(range(iterations), S)

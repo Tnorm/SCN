@@ -11,16 +11,21 @@ class FC(torch.nn.Module):
         self.fc1 = torch.nn.Linear(input_dim, 300)
         self.rlu = torch.nn.ReLU()
         self.sgmd = torch.nn.Sigmoid()
-        self.fc2 = torch.nn.Linear(300, 1)
-        self.fc3 = torch.nn.Linear(300,1)
+        self.fc2 = torch.nn.Linear(300, 2)
+        self.fc3 = torch.nn.Linear(2,1)
         #self.fc1.data = torch.zeros(input_dim, 300)
         #self.fc2.data = torch.zeros(300, 1)
         #self.fc3.data = torch.zeros(300,1)
         ## for one dimensional data
-
+        self.fc1.bias.data = self.fc1.bias.data/5
+        self.fc2.bias.data = self.fc2.bias.data/5
+        self.fc3.bias.data = self.fc3.bias.data/5
+        self.fc1.weight.data = self.fc1.weight.data/5
+        self.fc2.weight.data = self.fc2.weight.data/5
+        self.fc3.weight.data = self.fc3.weight.data/5
 
     def forward(self, inp):
-        return self.sgmd(self.fc2(self.rlu(self.fc1(inp))))
+        return self.fc3(self.rlu(self.fc2(self.rlu(self.fc1(inp)))))
 
 
     def features_num(self, inp):

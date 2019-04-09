@@ -11,29 +11,28 @@ import pickle
 
 direction = [0.0,float(1)/243]
 
-X, Y = koch([[0,0]], 5, direction)
-#X, Y = binary_frac([], 6, 0, 1)
+#X, Y = koch([[0,0]], 5, direction)
+X, Y = binary_frac([], 4, 0, 1)
 X = torch.from_numpy(np.asarray(X, dtype=np.float32)).view(len(X), -1)
 X = X.type(torch.FloatTensor)# + torch.rand(X.size())*1/97
 Y = torch.from_numpy(np.asarray(Y, dtype=np.float32)).view(len(Y), -1)
 
 
 
-batch_size = 1000
+batch_size = 100
 input_dim = 1
 
 
-experiments = 10
-iterations = 5000
-lr1 = 0.1
-
+experiments = 5
+iterations = 50000
+lr1 = 0.0001
 
 
 S = np.zeros(iterations)
 for experiment in range(experiments):
     fc = FC(1)
-    optimizer = torch.optim.SGD(fc.parameters(), lr=lr1)
-    criterion = torch.nn.L1Loss()
+    optimizer = torch.optim.Adam(fc.parameters(), lr=lr1)
+    criterion = torch.nn.MSELoss()
     for i in range(iterations):
         sample_inds = np.random.choice(X.size()[0], batch_size)
         samples = Variable(X[sample_inds])
@@ -44,8 +43,8 @@ for experiment in range(experiments):
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
-        if i % 100 == 0:
-            print i
+        if i % 1000 == 0:
+            print (i, S)
             pltx = X.view(-1, input_dim).numpy()
             plty1 = fc(Variable(X)).data.view(-1, 1).numpy()
             plty = Y.view(-1, 1).numpy()
@@ -57,7 +56,7 @@ for experiment in range(experiments):
             plt.clf()
 
 
-with open("fc_res2.txt", "wb") as fp:  # Pickling
+with open("fc_res5.txt", "wb") as fp:  # Pickling
     pickle.dump(S/experiments, fp)
 
 #plt.plot(range(iterations), S)

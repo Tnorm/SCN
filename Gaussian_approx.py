@@ -53,7 +53,7 @@ for experiment in range(experiments):
         sample_inds = np.random.choice(pos1.size()[0], batch_size)
         sample_inds2 = np.random.choice(pos1.size()[1], batch_size)
         samples = Variable(pos1[sample_inds, sample_inds2])
-        y = Variable(Z1[sample_inds, sample_inds2])
+        y = Variable(Z1[sample_inds, sample_inds2]).view(-1,1)
         output = scn(samples).view(-1, 1)
         loss = criterion(output, y)
         S[i] += loss.data[0]
@@ -69,7 +69,7 @@ for experiment in range(experiments):
         #scn.biases.data = torch.zeros(scn.biases.size())
         optimizer.zero_grad()
 
-        if i % 3000 == 0:
+        if i % 1000 == 0:
             print i
             #pltx = pos1.view(-1, input_dim).numpy()
             plty1 = scn(Variable(pos1.view(-1, 2))).data.view(49,49)
@@ -83,7 +83,8 @@ for experiment in range(experiments):
             plt.clf()
 
 
-with open("scn_res.txt2", "wb") as fp:  # Pickling
+
+with open("scn_res2.txt", "wb") as fp:  # Pickling
     pickle.dump(S/experiments, fp)
 
 #plt.plot(range(iterations), S)

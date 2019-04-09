@@ -16,8 +16,8 @@ class SCN(torch.nn.Module):
             self.L.append(torch.nn.Parameter(torch.ones(1,visible_num)/visible_num, requires_grad=True))
             ## visible units are defined as columns of a matrix
         ### UNCOMMENT THESE TWO LINES FOR SCN_fractal_test
-        #self.visible_fs = torch.nn.Parameter(torch.randn(visible_num, 1), requires_grad=True)
-        #self.biases = torch.nn.Parameter(torch.randn(depth, 1), requires_grad=True)
+        #self.visible_fs = torch.nn.Parameter(torch.randn(visible_num, 1)/5, requires_grad=True)
+        #self.biases = torch.nn.Parameter(torch.randn(depth, 1)/5, requires_grad=True)
         ###
         self.visible_fs = torch.nn.Parameter(torch.zeros(visible_num, 1), requires_grad = True)
         self.biases = torch.nn.Parameter(torch.zeros(depth,1), requires_grad = True)
@@ -31,18 +31,21 @@ class SCN(torch.nn.Module):
 
 
     def forward(self, inp):
+        hidden_collect = []
         f = self.visible_fs.repeat(inp.size()[0], 1, 1)
         h = self.visible_units.repeat(inp.size()[0], 1, 1)
         input_weights = self.get_first_input_weights_mdl1(inp, self.visible_units)
         for i in range(self.depth):
             input_weights, indices = self.update_weights(input_weights, self.L[i])
+            h_old = h.clone()
             if self.model == 1:
                 f, h = self.update_h_mdl1(f, h, indices, self.L[i], i)
             elif self.model == 2:
                 f, h = self.update_h_mdl2(f, h, indices, self.L[i], i)
-
+            hidden_collect.append([h_old, h[range(h.size()[0]), indices.long(), :]])
         out = torch.bmm(input_weights.view(inp.size()[0], 1, -1), f)
-        return out
+        #out = torch.nn.Sigmoid()(torch.bmm(input_weights.view(inp.size()[0], 1, -1), f))
+        return out, hidden_collect
 
 
     def update_weights(self, inp_weights, h_w):
@@ -65,8 +68,8 @@ class SCN(torch.nn.Module):
 
     def update_h_mdl2(self, f, h, indices, weights, i):
         new_h = torch.bmm(weights.repeat(h.size()[0], 1, 1), h).view(-1, self.input_dim)
-        f[range(h.size()[0]), indices.long(), :] = torch.nn.Sigmoid()(
-            torch.bmm(weights.repeat(h.size()[0], 1, 1), f.clone()) + self.biases[i])
+        f[range(h.size()[0]), indices.long(), :] = \
+            torch.bmm(weights.repeat(h.size()[0], 1, 1), f.clone()) + torch.nn.Sigmoid()(self.biases[i])
         h[range(h.size()[0]), indices.long(), :] = new_h
         return f, h
 
@@ -83,6 +86,16 @@ class SCN(torch.nn.Module):
     def initial_weights(self):
         return 1
 
+
+    def project_simplex(self, v, z=1): #sparsemax
+        v_sorted, _ = torch.sort(v, dim=0, descending=True)
+        cssv = torch.cumsum(v_sorted, dim=0) - z
+        ind = torch.arange(1, 1 + len(v)).to(dtype=v.dtype)
+        cond = v_sorted - cssv / ind > 0
+        rho = ind.masked_select(cond)[-1]
+        tau = cssv.masked_select(cond)[-1] / rho
+        w = torch.clamp(v - tau, min=0)
+        return w
 
 
 batch_size = 10
