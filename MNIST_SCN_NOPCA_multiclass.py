@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import TensorDataset, DataLoader
 import numpy as np
 from torch.autograd import Variable
-from SCN import SCN_multi
+from SCN import SCN_multi, SCN_multi_justified
 import pickle
 
 import torchvision
@@ -22,7 +22,7 @@ test_set = datasets.MNIST(root='./data', train=False, transform=trans, download=
 epoch = 100
 batch_size = 200
 lr1 = 0.5
-scn_depth = 5
+scn_depth = 1
 
 S = []
 train_acc = [0] * epoch
@@ -32,15 +32,15 @@ train_loss = [0] * epoch
 
 for exper in range(10):
     print('exper: ', exper)
-    zero = Variable(torch.zeros(1, 784))
-    eye = Variable(torch.eye(784))
+    zero = Variable(torch.zeros(1, 783))
+    eye = Variable(torch.eye(783))
     visible_units = torch.cat((zero, eye), 0)
     visible_units = visible_units.float()
 
-    scn = SCN_multi(785, 784, 10, visible_units, scn_depth, model=1)
+    scn = SCN_multi_justified(784, 783, 10, visible_units, scn_depth, model=1)
 
     train_loader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=True)
 
     optimizer = torch.optim.Adam(scn.parameters(), lr=lr1)
     criterion = torch.nn.CrossEntropyLoss()
@@ -62,7 +62,7 @@ for exper in range(10):
             output, _, last_h = scn(samples)
             output = output.view(-1, 10)
             predicts = (output.data.max(dim=-1)[1])
-            loss = criterion(output, y) + lamb * torch.norm(last_h - samples, dim=1).mean()
+            loss = criterion(output, y)# + lamb * torch.norm(last_h - samples, dim=1).mean()
             #print(criterion(output, y), lamb * torch.norm(last_h - samples, dim=1).mean())
             loss.backward(retain_graph=True)
             # if i % 50 != 0:

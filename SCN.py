@@ -130,7 +130,6 @@ class SCN_multi(torch.nn.Module):
         self.sftmax = torch.nn.Softmax(dim=-1)
 
     def forward(self, inp):
-
         hidden_collect = []
         f = self.visible_fs.repeat(inp.size()[0], 1, 1)
         h = self.visible_units.repeat(inp.size()[0], 1, 1)
@@ -178,8 +177,8 @@ class SCN_multi(torch.nn.Module):
         #print(new_h[0])
         f[range(h.size()[0]), indices.long(), :] = torch.matmul(weights, f.clone()).squeeze(-2) + \
                                                    self.biases[i]
-        s = torch.autograd.grad(f.sum(), weights)
-        print(s)
+        # s = torch.autograd.grad(f.sum(), weights)
+        # print(s)
                                                    #self.bias_funcs[i](new_h.detach())
         h[range(h.size()[0]), indices.long(), :] = new_h
         return f, h, new_h
@@ -215,6 +214,54 @@ class SCN_multi(torch.nn.Module):
         w = torch.clamp(v - tau, min=0)
         return w
 
+
+class SCN_multi_justified(torch.nn.Module):
+    def __init__(self, visible_num, input_dim, output_dim, visible_units, depth, model=1):
+        super(SCN_multi_justified, self).__init__()
+        self.L = torch.nn.ModuleList([])
+        self.bias_funcs = torch.nn.ModuleList([])
+        for _ in range(depth):
+            self.L.append(torch.nn.Linear(input_dim, 1))
+            self.bias_funcs.append(torch.nn.Linear(input_dim, output_dim))
+            self.bias_funcs[-1].weight.data.fill_(0.0)
+        self.visible_fs = torch.nn.Parameter(torch.zeros(visible_num, output_dim), requires_grad=True)
+        self.visible_ws = torch.nn.Parameter(torch.zeros(visible_num), requires_grad=True)
+        self.visible_units = visible_units
+        self.visible_num = visible_num
+
+        self.depth = depth
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.model = model
+        self.sftmax = torch.nn.Softmax(dim=-1)
+
+    def forward(self, inp):
+        hidden_collect = []
+
+        f = self.visible_fs.repeat(inp.size()[0], 1, 1)
+        w = self.visible_ws.repeat(inp.size()[0], 1)
+        h = self.visible_units.repeat(inp.size()[0], 1, 1)
+        input_weights = self.get_first_input_weights_mdl1(inp, self.visible_units)
+
+        for i in range(self.depth):
+            weights_div = input_weights / (self.sftmax(w.data) + 1e-20)
+            values, indices = torch.min(weights_div, 1)
+            input_weights = input_weights - values.view(-1, 1) * self.sftmax(w.data)
+            input_weights[range(values.size()[0]), indices.long()] = values
+
+            stfmax_w = self.sftmax(w.clone()).unsqueeze(-2)
+            new_h = torch.matmul(stfmax_w, h.clone()).squeeze(-2)
+            f[range(h.size()[0]), indices.long(), :] = torch.matmul(stfmax_w, f.clone()).squeeze(-2) + \
+                                                   self.bias_funcs[i](new_h)
+            h[range(h.size()[0]), indices.long(), :] = new_h
+            w[range(values.size()[0]), indices.long()] = self.L[i](new_h).squeeze()
+
+        out = torch.bmm(input_weights.view(inp.size()[0], 1, -1), f)
+        return out, hidden_collect, None
+
+    def get_first_input_weights_mdl1(self, inp, visible_units):
+        return inp
+        #return torch.cat((1 - torch.sum(inp, 1).view(-1, 1), inp), 1)
 
 
 # #### SIMPLICIAL COMPLEX NEURAL NETWORK LEARN FUNCTIONS!
